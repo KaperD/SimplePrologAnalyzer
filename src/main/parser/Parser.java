@@ -18,6 +18,13 @@ public class Parser {
     Cap = Literal , Cap | (Expression) , Cap | Literal | (Expression)
     Literal = [a-zA-Z_][a-zA-Z_0-9]*
      */
+    
+    static class SyntaxError extends RuntimeException {
+        SyntaxError() {}
+        SyntaxError(String errorMessage) {
+            super(errorMessage);
+        }
+    }
 
     static class Node {
         Node(Node l, Node r, String n) {
@@ -56,25 +63,43 @@ public class Parser {
             return;
         }
         if (current != null) {
-            throw new RuntimeException("Line " + current.lineNumber + ", position " + current.positionInLine + ": Expected '" + s + "' by " +
-                    caller + ", but found '" + current.value.toString() + "'");
+            String error = String.format("Line %d column %d: Expected '%s' by %s, but found '%s'\n",
+                    current.lineNumber, current.positionInLine + 1, s, caller, current.value.toString()) +
+                    lexer.getCurrentLine() + "\n" +
+                    "-".repeat(current.positionInLine) +
+                    "^";
+            throw new SyntaxError(error);
         } else {
-            throw new RuntimeException("Last line, last position: Expected '" + s + "' by " +
-                    caller + ", but nothing found");
+            String lastLine = lexer.getCurrentLine();
+            String error = String.format("Line %d column %d: Expected '%s' by %s, but nothing found\n",
+                    lexer.getLineNumber(), lastLine.length(), s, caller) +
+                    lexer.getCurrentLine() + "\n" +
+                    "-".repeat(lastLine.length()) +
+                    "^";
+            throw new SyntaxError(error);
         }
     }
 
     Node identifier() {
         Token l = current;
         current = lexer.nextToken();
+        String caller = Thread.currentThread().getStackTrace()[2].toString();
         if (l == null) {
-            throw new RuntimeException("Last line, last position. Expected identifier by " +
-                    Thread.currentThread().getStackTrace()[2] + ", but nothing found");
+            String lastLine = lexer.getCurrentLine();
+            String error = String.format("Line %d column %d: Expected identifier by %s, but nothing found\n",
+                    lexer.getLineNumber(), lastLine.length(), caller) +
+                    lexer.getCurrentLine() + "\n" +
+                    "-".repeat(lastLine.length()) +
+                    "^";
+            throw new SyntaxError(error);
         }
         if (!l.type.equals("IDENTIFIER")) {
-            throw new RuntimeException("Line " + current.lineNumber + ", position " +
-                    current.positionInLine +  ". Expected identifier by " +
-                    Thread.currentThread().getStackTrace()[2] + ", but found: " + l.value.toString());
+            String error = String.format("Line %d column %d: Expected identifier by %s, but found '%s'\n",
+                    l.lineNumber, l.positionInLine + 1, caller, l.value.toString()) +
+                    lexer.getCurrentLine() + "\n" +
+                    "-".repeat(l.positionInLine) +
+                    "^";
+            throw new SyntaxError(error);
         }
         return new Node(null, null, l.value.toString());
     }
@@ -91,12 +116,10 @@ public class Parser {
     }
 
     ArrayList<Node> prolog() {
-        Node l = relation();
         ArrayList<Node> ret = new ArrayList<>();
-        ret.add(l);
-        if (current != null) {
-            ArrayList<Node> r = prolog();
-            ret.addAll(r);
+        while (current != null) {
+            Node r = relation();
+            ret.add(r);
         }
         return ret;
     }
@@ -178,16 +201,28 @@ public class Parser {
             result = prolog();
             wasSuccessful = true;
             return true;
-        } catch (Exception ex) {
+        } catch (SyntaxError ex) {
             wasSuccessful = false;
             errorMessage = ex.getMessage();
+            errorWasSyntax = true;
+            return false;
+        } catch (SimpleLexer.UnrecognisedToken ex) {
+            wasSuccessful = false;
+            errorMessage = ex.getMessage();
+            errorWasWithToken = true;
             return false;
         }
     }
 
     public void printLastTree() throws IOException {
         if (!wasSuccessful) {
-            System.out.println("Code is incorrect:");
+            if (errorWasSyntax) {
+                System.out.println("Syntax error:");
+            } else if (errorWasWithToken) {
+                System.out.println("Lexer error:");
+            } else {
+                System.out.println("Unknown error:");
+            }
             System.out.println(errorMessage);
             return;
         }
@@ -218,11 +253,13 @@ public class Parser {
         f.close();
     }
 
-    String errorMessage = "";
-    ArrayList<Node> result;
-    boolean wasSuccessful = false;
-    svgDraw tree;
-    SimpleLexer lexer;
-    Token current;
+    private String errorMessage = "";
+    private boolean errorWasSyntax = false;
+    private boolean errorWasWithToken = false;
+    private ArrayList<Node> result;
+    private boolean wasSuccessful = false;
+    private svgDraw tree;
+    private SimpleLexer lexer;
+    private Token current;
 }
 

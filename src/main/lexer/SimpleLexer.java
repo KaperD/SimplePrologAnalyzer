@@ -9,6 +9,14 @@ import java.util.regex.Pattern;
 
 
 public class SimpleLexer {
+
+    public static class UnrecognisedToken extends RuntimeException {
+        UnrecognisedToken() {}
+        UnrecognisedToken(String errorMessage) {
+            super(errorMessage);
+        }
+    }
+
     /**
      * Sets {@code SimpleLexer} input.
      *
@@ -71,7 +79,7 @@ public class SimpleLexer {
      *
      * @return next token
      *
-     * @throws RuntimeException if hasn't recognised word
+     * @throws UnrecognisedToken if hasn't recognised word
      */
     public Token nextToken() {
         if (firstToken) {
@@ -95,6 +103,7 @@ public class SimpleLexer {
             if (!scan.hasNextLine() && lastToken.isEmpty()) return null;
             if (lastToken.isEmpty()) {
                 lastToken = scan.nextLine();
+                currentLine = lastToken;
                 ++lineNumber;
                 positionInLine = 0;
             } else {
@@ -117,7 +126,23 @@ public class SimpleLexer {
                 return ret;
             }
         }
-        throw new RuntimeException("Unrecognised token: '" + lastToken + "'");
+        throw new UnrecognisedToken("Unrecognised token: '" + lastToken + "'");
+    }
+
+    /**
+     *
+     * @return current line of text
+     */
+    public String getCurrentLine() {
+        return currentLine;
+    }
+
+    /**
+     *
+     * @return current line number
+     */
+    public int getLineNumber() {
+        return lineNumber;
     }
 
     private int lineNumber = 0;
@@ -127,6 +152,7 @@ public class SimpleLexer {
     private ArrayList<TokenInfo> tokens;
 
     private String lastToken = "";
+    private String currentLine = "";
     private Scanner scan;
 
     private Pattern ignore;
