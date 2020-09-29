@@ -126,7 +126,8 @@ public class SimpleLexer {
                 return ret;
             }
         }
-        throw new UnrecognisedToken("Unrecognised token: '" + lastToken + "'");
+        throw new UnrecognisedToken(String.format("Line %d column %d: Unrecognised token: '%s'",
+                lineNumber, positionInLine, lastToken));
     }
 
     /**
@@ -159,3 +160,4 @@ public class SimpleLexer {
 
     private boolean firstToken = true;
 }
+
