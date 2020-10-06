@@ -1,0 +1,92 @@
+from parser import parseText
+import unittest
+
+class TestParser(unittest.TestCase):
+    def test_correct(self):
+        self.assertIsNotNone(parseText('f.'))
+        self.assertIsNotNone(parseText('f :- g.'))
+        self.assertIsNotNone(parseText('f :- g, h; t.'))
+        self.assertIsNotNone(parseText('f :- g, (h; t).'))
+        self.assertIsNotNone(parseText('f a :- g, h (t c d).'))
+        self.assertIsNotNone(parseText('f (cons h t) :- g h, f t.'))
+        self.assertIsNotNone(parseText('f :-    (  ( ((g))  )).'))
+        self.assertIsNotNone(parseText('odd (cons H (cons H1 T)) (cons H T1) :- odd T T1.'))
+        self.assertIsNotNone(parseText('odd (cons H nil) nil.'))
+        self.assertIsNotNone(parseText('odd nil nil.'))
+        self.assertIsNotNone(parseText('f :- (b;a),(q,w,e).'))
+        self.assertIsNotNone(parseText('g:- ((a)  ;(b),(c)   ), aa.'))
+        self.assertIsNotNone(parseText('f :- (a,     b);c;(c,b),(a,b).'))
+        self.assertIsNotNone(parseText('f f f f :- f f f f f f.'))
+        self.assertIsNotNone(parseText('f (a((f))) (a):- o (a) (a(aa a) a a a (a (a))),a,a,a;a.'))
+
+    def test_wrongMissingDot(self):
+        self.assertIsNone(parseText('f'))
+        self.assertIsNone(parseText('f :- g'))
+        self.assertIsNone(parseText('f :- g, h; t'))
+        self.assertIsNone(parseText('f :- g, (h; t)'))
+        self.assertIsNone(parseText('f a :- g, h (t c d)'))
+        self.assertIsNone(parseText('f (cons h t) :- g h, f t'))
+        self.assertIsNone(parseText('f :-    (  ( ((g))  ))'))
+        self.assertIsNone(parseText('odd (cons H (cons H1 T)) (cons H T1) :- odd T T1'))
+        self.assertIsNone(parseText('odd (cons H nil) nil'))
+        self.assertIsNone(parseText('odd nil nil'))
+        self.assertIsNone(parseText('f :- (b;a),(q,w,e)'))
+        self.assertIsNone(parseText('g:- ((a)  ;(b),(c)   ), aa'))
+        self.assertIsNone(parseText('f :- (a,     b);c;(c,b),(a,b)'))
+        self.assertIsNone(parseText('f f f f :- f f f f f f'))
+        self.assertIsNone(parseText('f (a((f))) (a):- o (a) (a(aa a) a a a (a (a))),a,a,a;a'))
+    
+    def test_wrongBrackets(self):
+        self.assertIsNone(parseText('f (a.'))
+        self.assertIsNone(parseText('f :- g).'))
+        self.assertIsNone(parseText('f :- (g, (h; t).'))
+        self.assertIsNone(parseText('f :- g, (h; t)).'))
+        self.assertIsNone(parseText('f a :- g, h ((t)) c d).'))
+        self.assertIsNone(parseText('f (cons h t) (:- g h, f t.'))
+        self.assertIsNone(parseText('f :-    (   ((g))  )).'))
+        self.assertIsNone(parseText('odd cons H (cons H1 T)) (cons H T1) :- odd T T1.'))
+        self.assertIsNone(parseText('odd cons H nil) nil.'))
+        self.assertIsNone(parseText('odd nil ((nil))().'))
+        self.assertIsNone(parseText('f :- (b;a),(q,w,e.'))
+        self.assertIsNone(parseText('g:- ((a)  ;(b),c)   ), aa.'))
+        self.assertIsNone(parseText('f :- (a,     b);c;c,b),(a,b).'))
+        self.assertIsNone(parseText('f f f f :- f f f f) (f f.'))
+        self.assertIsNone(parseText('f (a((f))) (a):- o (a (a(aa a) a a a (a (a))),a,a,a;a.'))
+
+    def test_wrongMissingHead(self):
+        self.assertIsNone(parseText('.'))
+        self.assertIsNone(parseText(' :- g.'))
+        self.assertIsNone(parseText(' :- g, h; t.'))
+        self.assertIsNone(parseText(' :- g, (h; t).'))
+        self.assertIsNone(parseText(':- g, h (t c d).'))
+        self.assertIsNone(parseText(':- g h, f t.'))
+        self.assertIsNone(parseText(':-    (  ( ((g))  )).'))
+        self.assertIsNone(parseText(' :- odd T T1.'))
+        self.assertIsNone(parseText(':-odd (cons H nil) nil.'))
+        self.assertIsNone(parseText(':-odd nil nil.'))
+        self.assertIsNone(parseText('f :- :-(b;a),(q,w,e).'))
+        self.assertIsNone(parseText(':- ((a)  ;(b),(c)   ), aa.'))
+        self.assertIsNone(parseText(' :- (a,     b);c;(c,b),(a,b).'))
+        self.assertIsNone(parseText(' :- f f f f f f.'))
+        self.assertIsNone(parseText(':- o (a) (a(aa a) a a a (a (a))),a,a,a;a.'))
+
+    def test_wrongMissingPartOfBody(self):
+        self.assertIsNone(parseText('f :- .'))
+        self.assertIsNone(parseText('f :- ,g.'))
+        self.assertIsNone(parseText('f :- g, ; t.'))
+        self.assertIsNone(parseText('f :- g, ;(h; t).'))
+        self.assertIsNone(parseText('f a :- g, h (t c d),.'))
+        self.assertIsNone(parseText('f (cons h t) :- g h f t ;.'))
+        self.assertIsNone(parseText('f :-    (  ( ((g)) ; )).'))
+        self.assertIsNone(parseText('odd (cons H (cons H1 T),) (cons H T1) :- odd T T1.'))
+        self.assertIsNone(parseText('odd (cons H ,nil) nil.'))
+
+    def test_wrongAtom(self):
+        self.assertIsNone(parseText('(f) g :- a.'))
+        self.assertIsNone(parseText('(f g) g :- a.'))
+        self.assertIsNone(parseText('a ((a) f) g :- a.'))
+        self.assertIsNone(parseText('g :- a ((a) a)  .'))
+        self.assertIsNone(parseText('g :- a (a ((a) a)) a.'))
+
+if __name__ == '__main__':
+    unittest.main()
