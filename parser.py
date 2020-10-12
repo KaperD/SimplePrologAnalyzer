@@ -1,5 +1,5 @@
 from lexer import tokens
-from lexer import lexer
+from lexer import lexer, find_column
 import ply.yacc as yacc
 import sys
 
@@ -84,37 +84,35 @@ def p_closeAtom_recursive(p):
     'closeAtom : OPEN closeAtom CLOSE'
     p[0] = p[2]
 
-def find_column(input, token): # взята с сайта ply
-     line_start = input.rfind('\n', 0, token.lexpos) + 1
-     return (token.lexpos - line_start) + 1
-
-errorMessage = ''
 
 def p_error(p): 
+    errorMessage = ''
     if p:
         column = find_column(lexer.lexdata, p)
-        global errorMessage
         errorMessage += f'Line {p.lineno}, column {column}: Syntax error\n'
         errorMessage += lexer.lexdata.split('\n')[p.lineno - 1] + '\n'
-        errorMessage += '-' * (column - 1) + '^\n'
+        errorMessage += '-' * (column - 1) + '^'
     else:
-        errorMessage += 'Syntax error: unexpected EOF\n'
-    global success
-    success = False
-    while parser.token():
-        pass
+        errorMessage += 'Syntax error: unexpected EOF'
+    raise SyntaxError(errorMessage)
 
 parser = yacc.yacc()
-success = True
+
+class ParseResult:
+    def __init__(self, str, b):
+        self.str = str
+        self.success = b
+    def __bool__(self):
+        return self.success
+    def __str__(self):
+        return self.str
 
 def parseText(text):
-    global success
-    success = True
-    result = parser.parse(text) 
-    if success:
-        return result
-    else:
-        return None
+    try:
+        result = parser.parse(text) 
+        return ParseResult(str(result), True)
+    except SyntaxError as ex:
+        return ParseResult(str(ex), False)
 
 if __name__ == '__main__':
     readFile = open(sys.argv[1], 'r')
@@ -123,11 +121,11 @@ if __name__ == '__main__':
     result = parseText(readFile.read()) 
 
     if result:
-        # print(str(result))
+        print(str(result))
         writeFile.write(str(result))
         writeFile.write('\n')
     else:
-        print(errorMessage, end='')
+        print(str(result))
 
     writeFile.close()
     readFile.close()

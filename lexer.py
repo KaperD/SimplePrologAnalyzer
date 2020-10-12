@@ -25,9 +25,16 @@ def t_newline(t):
   r'\n+'
   t.lexer.lineno += len(t.value)
 
+def find_column(input, token): # взята с сайта ply
+     line_start = input.rfind('\n', 0, token.lexpos) + 1
+     return (token.lexpos - line_start) + 1
+
 def t_error(t):
-    print("Illegal character '%s'" % t.value[0])
-    t.lexer.skip(1)
+    column = find_column(lexer.lexdata, t)
+    errorMessage = f'Line {t.lineno}, column {column}: ' + "Illegal character '%s'" % t.value[0] + '\n'
+    errorMessage += lexer.lexdata.split('\n')[t.lineno - 1] + '\n'
+    errorMessage += '-' * (column - 1) + '^'
+    raise SyntaxError(errorMessage)
 
 lexer = lex.lex()
 
