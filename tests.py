@@ -10,7 +10,6 @@ class TestParser(unittest.TestCase):
 
     def test_WrongModule(self):
         self.assertFalse(parseText('Module name.'))
-        self.assertFalse(parseText('modules n.'))
         self.assertFalse(parseText('module Name.'))
         self.assertFalse(parseText('module [g].'))
         self.assertFalse(parseText('module (name).'))

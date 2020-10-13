@@ -65,7 +65,7 @@ def Dot():
 
 @generate
 def Module():
-    yield regex('module') << spaces # regex, а не string, потому что string прочитае первые буквы, даже если слово moduJJJ, а мне это не нужно
+    yield regex(r'module\b') << spaces # regex, а не string, потому что string прочитае первые буквы, даже если слово moduJJJ, а мне это не нужно
     name = yield Identifier
     yield Dot
     return f'Module = {name}'
@@ -99,7 +99,7 @@ def Type():
 
 @generate
 def TypeDef():
-    yield regex('type') << spaces # если есть слово type, то мы точно хотим корректный тип
+    yield regex(r'type\b') << spaces # если есть слово type, то мы точно хотим корректный тип
     typeName = yield Identifier
     type = yield Type
     return f'Typedef {typeName} = {type}'
