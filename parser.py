@@ -178,7 +178,7 @@ def ListElem():
 @generate
 def ElementsList():
     elem = yield ListElem
-    tail = yield spaces >> string(',') >> spaces >> ElementsList | Empty
+    tail = yield spaces >> string(',') >> spaces >> ElementsList | spaces >> string(']') << spaces
     if tail:
         return f'{elem}, {tail}'
     return elem
@@ -188,15 +188,16 @@ def HeadTailList():
     head = yield ListElem
     yield spaces >> string('|') << spaces
     tail = yield Var
+    yield spaces >> string(']') << spaces
     return f'Head ({head}) Tail ({tail})'
 
 @generate
 def List():
     yield spaces >> string('[') << spaces
-    listBody = yield HeadTailList ^ ElementsList | Empty
-    yield spaces >> string(']') << spaces
+    listBody = yield ElementsList ^ HeadTailList | Empty
     if listBody:
         return f'List [{listBody}]'
+    yield spaces >> string(']') << spaces
     return 'EmptyList'
 
 # ----------------------Atom----------------------
@@ -274,10 +275,12 @@ def parseText(text):
         # print(message)
         return ParseResult(message, False)
 
+   
+
 if __name__ == "__main__":
     readFile = open(sys.argv[1], 'r')
     writeFile = open(sys.argv[1] + '.out', 'w')
-
+    
     result = parseText(readFile.read()) 
 
     if result:
