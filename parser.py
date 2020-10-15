@@ -229,7 +229,7 @@ def BracketsElem():
 
 @generate
 def Elem():
-    elem = yield List | Var | Identifier | BracketsAtom ^ BracketsElem
+    elem = yield List | Var | Identifier | BracketsElem ^ BracketsAtom
     return elem
 
 @generate
