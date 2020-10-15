@@ -1,5 +1,7 @@
 from parsec import *
 import sys
+import threading
+import argparse
 
 # Prolog = Module TypesDef Relations
 
@@ -65,7 +67,7 @@ def Dot():
 
 @generate
 def Module():
-    yield regex(r'module\b') << spaces # regex, а не string, потому что string прочитае первые буквы, даже если слово moduJJJ, а мне это не нужно
+    yield spaces >> regex(r'module\b') << spaces # regex, а не string, потому что string прочитае первые буквы, даже если слово moduJJJ, а мне это не нужно
     name = yield Identifier
     yield Dot
     return f'Module = {name}'
@@ -99,7 +101,7 @@ def Type():
 
 @generate
 def TypeDef():
-    yield regex(r'type\b') << spaces # если есть слово type, то мы точно хотим корректный тип
+    yield spaces >> regex(r'type\b') << spaces # если есть слово type, то мы точно хотим корректный тип
     typeName = yield Identifier
     type = yield Type
     return f'Typedef {typeName} = {type}'
@@ -177,27 +179,36 @@ def ListElem():
 
 @generate
 def ElementsList():
-    elem = yield ListElem
-    tail = yield spaces >> string(',') >> spaces >> ElementsList | spaces >> string(']') << spaces
-    if tail:
-        return f'{elem}, {tail}'
-    return elem
+    comma = yield spaces >> string(',') << spaces | ListEnd
+    if comma:
+        elem = yield ListElem
+        tail = yield ElementsList
+        if tail:
+            return f'{elem}, {tail}'
+        return f'{elem}'
+    return None
 
 @generate
 def HeadTailList():
-    head = yield ListElem
     yield spaces >> string('|') << spaces
     tail = yield Var
+    yield ListEnd
+    return f'| {tail}'
+
+@generate
+def ListEnd():
     yield spaces >> string(']') << spaces
-    return f'Head ({head}) Tail ({tail})'
+    return None
 
 @generate
 def List():
     yield spaces >> string('[') << spaces
-    listBody = yield ElementsList ^ HeadTailList | Empty
-    if listBody:
-        return f'List [{listBody}]'
-    yield spaces >> string(']') << spaces
+    elem = yield ListEnd ^ ListElem
+    if elem:
+        listBody = yield  HeadTailList | ElementsList
+        if listBody:
+            return f'List [{elem} {listBody}]'
+        return f'List [{elem}]'
     return 'EmptyList'
 
 # ----------------------Atom----------------------
@@ -263,8 +274,7 @@ class ParseResult:
     def __str__(self):
         return self.str
 
-def parseText(text):
-    parser = Prolog
+def parseText(text, parser):
     try:
         return ParseResult(parser.parse(text), True)
     except ParseError as ex:
@@ -275,13 +285,29 @@ def parseText(text):
         # print(message)
         return ParseResult(message, False)
 
-   
 
-if __name__ == "__main__":
-    readFile = open(sys.argv[1], 'r')
-    writeFile = open(sys.argv[1] + '.out', 'w')
-    
-    result = parseText(readFile.read()) 
+def main():
+    args = argparse.ArgumentParser(description='Parse Prolog.')
+    args.add_argument('--atom', action='store_const', const=Atom, dest = 'parser')
+    args.add_argument('--typeexpr', action='store_const', const=Type, dest = 'parser')
+    args.add_argument('--type', action='store_const', const=TypeDef, dest = 'parser')
+    args.add_argument('--module', action='store_const', const=Module, dest = 'parser')
+    args.add_argument('--relation', action='store_const', const=Relation, dest = 'parser')
+    args.add_argument('--list', action='store_const', const=List, dest = 'parser')
+    args.add_argument('--prog', action='store_const', const=Prolog, dest = 'parser')
+    args.add_argument('file', type=str)
+
+    r = args.parse_args()
+
+
+    readFile = open(r.file, 'r')
+    writeFile = open(r.file + '.out', 'w')
+
+    parser = Prolog
+    if r.parser:
+        parser = r.parser
+
+    result = parseText(readFile.read(), parser) 
 
     if result:
         writeFile.write(str(result))
@@ -292,3 +318,11 @@ if __name__ == "__main__":
 
     writeFile.close()
     readFile.close()
+
+if __name__ == "__main__":
+    main()
+    # sys.setrecursionlimit(100000)
+    # threading.stack_size(0x2000000)
+    # t = threading.Thread(target=main)
+    # t.start()
+    # t.join()
